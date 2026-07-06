@@ -1,0 +1,79 @@
+name: Pipeline Sacel diario
+
+on:
+  schedule:
+    # GitHub Actions usa UTC. Chile alterna entre UTC-3 y UTC-4,
+    # por eso se agenda en ambas horas y se filtra a las 09:00 local.
+    - cron: "0 12,13 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sacel-diario
+  cancel-in-progress: false
+
+jobs:
+  pipeline-sacel:
+    name: Ejecutar pipeline Sacel
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      TZ: America/Santiago
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_SSLMODE: ${{ secrets.DB_SSLMODE || 'require' }}
+      DEV_DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+      TWILIO_TO: ${{ secrets.TWILIO_TO }}
+      SACEL_USER: ${{ secrets.SACEL_USER }}
+      SACEL_PASSWORD: ${{ secrets.SACEL_PASSWORD }}
+      SEND_WHATSAPP: ${{ secrets.SEND_WHATSAPP || 'false' }}
+
+    steps:
+      - name: Validar hora local
+        id: hora-local
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            hora_actual="$(TZ=America/Santiago date +%H)"
+            if [ "$hora_actual" != "09" ]; then
+              echo "run_pipeline=false" >> "$GITHUB_OUTPUT"
+              echo "Ejecucion omitida: hora local actual $hora_actual, no 09."
+              exit 0
+            fi
+          fi
+
+          echo "run_pipeline=true" >> "$GITHUB_OUTPUT"
+
+      - name: Descargar repositorio
+        if: steps.hora-local.outputs.run_pipeline == 'true'
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        if: steps.hora-local.outputs.run_pipeline == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Configurar Chrome
+        if: steps.hora-local.outputs.run_pipeline == 'true'
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Instalar dependencias
+        if: steps.hora-local.outputs.run_pipeline == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar pipeline Sacel
+        if: steps.hora-local.outputs.run_pipeline == 'true'
+        env:
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: python "SCRIPTS VS/pipeline_sacel.py"

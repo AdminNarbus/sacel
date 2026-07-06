@@ -1,0 +1,56 @@
+# Entornos y configuracion local
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Dependencias y builds
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Logs y archivos temporales
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+logswsp/
+
+# Descargas y salidas generadas por los robots
+SacelExcel/
+SacelCSV/
+ExcesoVelocidadCSV/
+*.crdownload
+
+# Selenium / WebDriver
+.wdm/
+chromedriver*
+geckodriver*
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Archivos locales de Codex/agentes
+.agents/
+.codex/
