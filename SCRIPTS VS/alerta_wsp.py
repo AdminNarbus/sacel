@@ -401,4 +401,27 @@ else:
     for telefono in TWILIO_TO:
         print(f"[DRY-RUN] simulando envío a {telefono}")
     marcar_ejecucion_hoy()
-    print(f"✅ Dry-run completado para {MODO} (mensajes no enviados)")
+    print(f"[OK] Dry-run completado para {MODO} (mensajes no enviados)")
+    # ==================================================
+    # ENVIO CORREO (reutiliza lógica de SCANIA)
+    # ==================================================
+    if SEND_EMAIL_ENABLED:
+        if not SMTP_USER or not SMTP_PASSWORD or not SMTP_FROM:
+            raise RuntimeError("Faltan variables SMTP_USER/SMTP_PASSWORD/SMTP_FROM para enviar correo")
+        email = EmailMessage()
+        email["Subject"] = f"Alerta diaria {MODO.upper()} - {fecha_reporte}"
+        email["From"] = SMTP_FROM
+        email["To"] = ", ".join(CORREO_TO)
+        email.set_content(mensaje_final)
+        try:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+                smtp.starttls()
+                smtp.login(SMTP_USER, SMTP_PASSWORD)
+                smtp.send_message(email)
+        except smtplib.SMTPAuthenticationError as exc:
+            raise RuntimeError(
+                "Gmail rechazo el login SMTP. Usa una App Password de Google en SMTP_PASSWORD, no la clave normal de la cuenta."
+            ) from exc
+        print(f"[OK] Correo {MODO} enviado a {len(CORREO_TO)} destinatario(s)")
+    elif os.getenv("CORREO"):
+        print("[DRY-RUN] SEND_EMAIL está desactivado. No se enviarán correos.")
