@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import unicodedata
 import sys
 import os
+import smtplib
+from email.message import EmailMessage
 
 # Forzar UTF-8 en stdout para soportar emojis en Windows
 sys.stdout.reconfigure(encoding='utf-8')
@@ -43,6 +45,20 @@ TWILIO_TO = [telefono.strip() for telefono in os.getenv("TWILIO_TO", "").split("
 # Permitir ejecutar en modo 'dry-run' para evitar envíos reales (usar SEND_WHATSAPP=false)
 SEND_WHATSAPP = os.getenv("SEND_WHATSAPP", "true").strip().lower()
 SEND_WHATSAPP_ENABLED = SEND_WHATSAPP not in ("false", "0", "no")
+
+CORREO_TO = [
+    correo.strip()
+    for bloque in os.getenv("CORREO", "").split(";")
+    for correo in bloque.split(",")
+    if correo.strip()
+]
+SEND_EMAIL = os.getenv("SEND_EMAIL", "true").strip().lower()
+SEND_EMAIL_ENABLED = SEND_EMAIL not in ("false", "0", "no") and bool(CORREO_TO)
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM = os.getenv("SMTP_FROM") or SMTP_USER
 
 # ==================================================
 # VALIDACION MODO
@@ -375,6 +391,30 @@ print(mensaje_final)
 print("=" * 80)
 
 # ==================================================
+# ENVIO CORREO
+# ==================================================
+if SEND_EMAIL_ENABLED:
+    if not SMTP_USER or not SMTP_PASSWORD or not SMTP_FROM:
+        raise RuntimeError("Faltan variables SMTP_USER/SMTP_PASSWORD/SMTP_FROM para enviar correo")
+    email = EmailMessage()
+    email["Subject"] = f"Alerta diaria {MODO.upper()} - {fecha_reporte}"
+    email["From"] = SMTP_FROM
+    email["To"] = ", ".join(CORREO_TO)
+    email.set_content(mensaje_final)
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+            smtp.starttls()
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
+            smtp.send_message(email)
+    except smtplib.SMTPAuthenticationError as exc:
+        raise RuntimeError(
+            "Gmail rechazo el login SMTP. Usa una App Password de Google en SMTP_PASSWORD, no la clave normal de la cuenta."
+        ) from exc
+    print(f"[OK] Correo {MODO} enviado a {len(CORREO_TO)} destinatario(s)")
+elif os.getenv("CORREO"):
+    print("[DRY-RUN] SEND_EMAIL está desactivado. No se enviarán correos.")
+
+# ==================================================
 # ENVÍO WHATSAPP (o simulación si SEND_WHATSAPP está desactivado)
 # ==================================================
 if SEND_WHATSAPP_ENABLED:
@@ -384,6 +424,8 @@ if SEND_WHATSAPP_ENABLED:
     from twilio.rest import Client
 
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    enviados = 0
+    fallidos = 0
     for telefono in TWILIO_TO:
         try:
             client.messages.create(
@@ -391,37 +433,21 @@ if SEND_WHATSAPP_ENABLED:
                 to=telefono,
                 body=mensaje_final
             )
+            enviados += 1
             print(f"mensaje enviado a {telefono}")
         except Exception as e:
+            fallidos += 1
             print(f"Error al enviar a {telefono}:{e}")
     marcar_ejecucion_hoy()
-    print(f"✅ WhatsApp {MODO} enviado correctamente")
+    if enviados == 0:
+        raise RuntimeError(f"No se pudo enviar WhatsApp {MODO} a ningún destinatario")
+    if fallidos:
+        print(f"[WARN] WhatsApp {MODO}: enviados={enviados} | fallidos={fallidos}")
+    else:
+        print(f"✅ WhatsApp {MODO} enviado correctamente")
 else:
     print("[DRY-RUN] SEND_WHATSAPP está desactivado. No se enviarán mensajes WhatsApp.")
     for telefono in TWILIO_TO:
         print(f"[DRY-RUN] simulando envío a {telefono}")
     marcar_ejecucion_hoy()
     print(f"[OK] Dry-run completado para {MODO} (mensajes no enviados)")
-    # ==================================================
-    # ENVIO CORREO (reutiliza lógica de SCANIA)
-    # ==================================================
-    if SEND_EMAIL_ENABLED:
-        if not SMTP_USER or not SMTP_PASSWORD or not SMTP_FROM:
-            raise RuntimeError("Faltan variables SMTP_USER/SMTP_PASSWORD/SMTP_FROM para enviar correo")
-        email = EmailMessage()
-        email["Subject"] = f"Alerta diaria {MODO.upper()} - {fecha_reporte}"
-        email["From"] = SMTP_FROM
-        email["To"] = ", ".join(CORREO_TO)
-        email.set_content(mensaje_final)
-        try:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
-                smtp.starttls()
-                smtp.login(SMTP_USER, SMTP_PASSWORD)
-                smtp.send_message(email)
-        except smtplib.SMTPAuthenticationError as exc:
-            raise RuntimeError(
-                "Gmail rechazo el login SMTP. Usa una App Password de Google en SMTP_PASSWORD, no la clave normal de la cuenta."
-            ) from exc
-        print(f"[OK] Correo {MODO} enviado a {len(CORREO_TO)} destinatario(s)")
-    elif os.getenv("CORREO"):
-        print("[DRY-RUN] SEND_EMAIL está desactivado. No se enviarán correos.")

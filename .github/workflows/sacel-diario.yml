@@ -33,7 +33,11 @@ jobs:
       SACEL_USER: ${{ secrets.SACEL_USER }}
       SACEL_PASSWORD: ${{ secrets.SACEL_PASSWORD }}
       SEND_WHATSAPP: ${{ secrets.SEND_WHATSAPP || 'false' }}
-
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      CORREO: ${{ secrets.CORREO }}
+      SEND_EMAIL: ${{ secrets.SEND_EMAIL || 'false' }}
     steps:
       - name: Validar hora local
         id: hora-local

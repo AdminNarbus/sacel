@@ -94,6 +94,8 @@ def iniciar_robot_sacel_mensual():
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
     chrome_bin = find_chrome_binary()
     if chrome_bin:
