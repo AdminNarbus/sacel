@@ -107,8 +107,7 @@ def iniciar_robot_sacel_mensual():
     }
     options.add_experimental_option("prefs", prefs)
 
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver, 30)
 
     archivo_descargado = None

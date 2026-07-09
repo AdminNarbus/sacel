@@ -134,8 +134,7 @@ def iniciar_descarga_excesos(fechas=None):
     }
     options.add_experimental_option("prefs", prefs)
 
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver, 20)
 
     try:
