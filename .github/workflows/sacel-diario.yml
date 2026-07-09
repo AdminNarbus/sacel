@@ -39,45 +39,25 @@ jobs:
       CORREO: ${{ secrets.CORREO }}
       SEND_EMAIL: ${{ secrets.SEND_EMAIL || 'false' }}
     steps:
-      - name: Validar hora local
-        id: hora-local
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            hora_actual="$(TZ=America/Santiago date +%H)"
-            if [ "$hora_actual" != "09" ]; then
-              echo "run_pipeline=false" >> "$GITHUB_OUTPUT"
-              echo "Ejecucion omitida: hora local actual $hora_actual, no 09."
-              exit 0
-            fi
-          fi
-
-          echo "run_pipeline=true" >> "$GITHUB_OUTPUT"
-
       - name: Descargar repositorio
-        if: steps.hora-local.outputs.run_pipeline == 'true'
         uses: actions/checkout@v4
 
       - name: Configurar Python
-        if: steps.hora-local.outputs.run_pipeline == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Configurar Chrome
-        if: steps.hora-local.outputs.run_pipeline == 'true'
         id: setup-chrome
         uses: browser-actions/setup-chrome@v1
 
       - name: Instalar dependencias
-        if: steps.hora-local.outputs.run_pipeline == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Ejecutar pipeline Sacel
-        if: steps.hora-local.outputs.run_pipeline == 'true'
         env:
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: python "SCRIPTS VS/pipeline_sacel.py"
