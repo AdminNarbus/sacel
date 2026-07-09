@@ -48,9 +48,14 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Remover Chromedriver preinstalado conflictivo
+        run: sudo rm -f /usr/local/bin/chromedriver
+
       - name: Configurar Chrome
         id: setup-chrome
         uses: browser-actions/setup-chrome@v1
+        with:
+          install-chromedriver: true
 
       - name: Instalar dependencias
         run: |
