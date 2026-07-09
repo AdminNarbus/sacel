@@ -49,7 +49,9 @@ jobs:
           cache: pip
 
       - name: Remover Chromedriver preinstalado conflictivo
-        run: sudo rm -f /usr/local/bin/chromedriver
+        run: |
+          sudo rm -f /usr/local/bin/chromedriver
+          sudo rm -f /usr/bin/chromedriver
 
       - name: Configurar Chrome
         id: setup-chrome
