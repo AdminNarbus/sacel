@@ -26,7 +26,7 @@ SCANIA_CSV = BASE / "ScaniaCSV"
 
 UMBRAL_HORAS_SACEL = 5.01
 UMBRAL_RALENTI_SACEL = 10.0
-UMBRAL_RALENTI_SCANIA = 15.0
+UMBRAL_RALENTI_SCANIA = 18.0
 
 PRECIO_DIESEL = 960
 MAX_CHARS = 1550
@@ -130,25 +130,9 @@ def parse_horas_minutos(valor):
     if pd.isna(valor):
         return None
     try:
-        texto = str(valor).strip()
-        dias = 0
-        if "day" in texto:
-            if "days" in texto:
-                parte_dias, texto = texto.split("days", 1)
-            else:
-                parte_dias, texto = texto.split("day", 1)
-            dias = int(parte_dias.strip())
-            texto = texto.strip().lstrip(",").strip()
-
-        partes = texto.split(":")
-        if len(partes) < 2:
-            return None
-
-        h = int(float(partes[0]))
-        m = int(float(partes[1]))
-        s = int(float(partes[2])) if len(partes) > 2 else 0
-        return dias * 24 + h + m / 60 + s / 3600
-    except Exception:
+        h, m = str(valor).split(":")
+        return int(h) + int(m) / 60
+    except:
         return None
 
 def filas_datos_sacel(df_raw):
@@ -169,27 +153,13 @@ def to_numeric(valor):
 def to_interval(valor):
     if pd.isna(valor):
         return None
-    try:
-        texto = str(valor).strip()
-        dias = 0
-        if "day" in texto:
-            if "days" in texto:
-                parte_dias, texto = texto.split("days", 1)
-            else:
-                parte_dias, texto = texto.split("day", 1)
-            dias = int(parte_dias.strip())
-            texto = texto.strip().lstrip(",").strip()
-
-        if ":" not in texto:
+    if isinstance(valor, str) and ":" in valor:
+        try:
+            h, m = valor.split(":")
+            return f"{int(h)} hours {int(m)} minutes"
+        except:
             return None
-
-        partes = texto.split(":")
-        h = int(float(partes[0]))
-        m = int(float(partes[1]))
-        s = int(float(partes[2])) if len(partes) > 2 else 0
-        return f"{dias} days {h} hours {m} minutes {s} seconds"
-    except Exception:
-        return None
+    return None
 
 def subir_scania_bd(df_raw, source_name):
     import psycopg2

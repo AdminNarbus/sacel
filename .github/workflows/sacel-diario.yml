@@ -3,8 +3,8 @@ name: Pipeline Sacel diario
 on:
   schedule:
     # GitHub Actions usa UTC. Chile alterna entre UTC-3 y UTC-4,
-    # por eso se agenda en ambas horas y se filtra a las 09:00 local.
-    - cron: "0 12,13 * * *"
+    # por eso se agenda en ambas horas para calzar con las 07:00 local.
+    - cron: "0 10,11 * * *"
   workflow_dispatch:
 
 concurrency:
