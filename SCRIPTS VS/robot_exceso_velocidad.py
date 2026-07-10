@@ -123,6 +123,8 @@ def iniciar_descarga_excesos(fechas=None):
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.page_load_strategy = "eager"
 
     chrome_bin = find_chrome_binary()
     if chrome_bin:
@@ -135,6 +137,7 @@ def iniciar_descarga_excesos(fechas=None):
     options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(options=options)
+    driver.set_page_load_timeout(60)
     wait = WebDriverWait(driver, 20)
 
     try:
@@ -276,6 +279,6 @@ if __name__ == "__main__":
     ejecutar_con_reintentos(
         ejecutar_descargas_completas,
         nombre="ROBOT EXCESO VELOCIDAD",
-        max_intentos=1,
+        max_intentos=3,
         espera=15
     )

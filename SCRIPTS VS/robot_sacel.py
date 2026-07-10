@@ -96,6 +96,9 @@ def iniciar_robot_sacel_mensual():
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.page_load_strategy = "eager"
 
     chrome_bin = find_chrome_binary()
     if chrome_bin:
@@ -108,6 +111,7 @@ def iniciar_robot_sacel_mensual():
     options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(options=options)
+    driver.set_page_load_timeout(60)
     wait = WebDriverWait(driver, 30)
 
     archivo_descargado = None
@@ -238,6 +242,6 @@ if __name__ == "__main__":
     ejecutar_con_reintentos(
         iniciar_robot_sacel_mensual,
         nombre="ROBOT SACEL",
-        max_intentos=1,
+        max_intentos=3,
         espera=15
     )
