@@ -13,7 +13,16 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
-from common import repo_path, ejecutar_con_reintentos, inyectar_fecha_js, verificar_descarga, find_chrome_binary, obtener_fechas_faltantes
+from common import (
+    repo_path,
+    ejecutar_con_reintentos,
+    inyectar_fecha_js,
+    verificar_descarga,
+    obtener_fechas_faltantes,
+    chrome_options_descargas,
+    preparar_chrome_descargas,
+    guardar_screenshot_error,
+)
 
 # ==========================================
 # CONFIGURACIÓN
@@ -117,26 +126,9 @@ def iniciar_descarga_excesos(fechas=None):
 
     os.makedirs(CARPETA_DESCARGAS, exist_ok=True)
 
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.page_load_strategy = "eager"
-
-    chrome_bin = find_chrome_binary()
-    if chrome_bin:
-        options.binary_location = chrome_bin
-
-    prefs = {
-        "download.default_directory": CARPETA_DESCARGAS,
-        "download.prompt_for_download": False
-    }
-    options.add_experimental_option("prefs", prefs)
-
+    options = chrome_options_descargas(CARPETA_DESCARGAS)
     driver = webdriver.Chrome(options=options)
+    preparar_chrome_descargas(driver, CARPETA_DESCARGAS)
     driver.set_page_load_timeout(60)
     wait = WebDriverWait(driver, 20)
 
@@ -213,6 +205,7 @@ def iniciar_descarga_excesos(fechas=None):
                 print("      [INFO] No se detectaron excesos de velocidad para descargar en esta fecha.")
 
     except Exception as e:
+        guardar_screenshot_error(driver, "error_sacel_excesos.png")
         print(f"[ERROR CRITICO] {e}")
         raise
     finally:

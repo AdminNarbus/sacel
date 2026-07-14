@@ -14,7 +14,14 @@ from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
 from dotenv import load_dotenv
-from common import repo_path, inyectar_fecha_js, verificar_descarga, find_chrome_binary
+from common import (
+    repo_path,
+    inyectar_fecha_js,
+    verificar_descarga,
+    chrome_options_descargas,
+    preparar_chrome_descargas,
+    guardar_screenshot_error,
+)
 
 # ==========================================
 # CONFIGURACIÓN Y RUTAS DINÁMICAS
@@ -91,26 +98,9 @@ def iniciar_robot_sacel_mensual():
 
     os.makedirs(CARPETA_FINAL, exist_ok=True)
 
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.page_load_strategy = "eager"
-
-    chrome_bin = find_chrome_binary()
-    if chrome_bin:
-        options.binary_location = chrome_bin
-
-    prefs = {
-        "download.default_directory": CARPETA_DESCARGAS,
-        "download.prompt_for_download": False
-    }
-    options.add_experimental_option("prefs", prefs)
-
+    options = chrome_options_descargas(CARPETA_DESCARGAS)
     driver = webdriver.Chrome(options=options)
+    preparar_chrome_descargas(driver, CARPETA_DESCARGAS)
     driver.set_page_load_timeout(60)
     wait = WebDriverWait(driver, 30)
 
@@ -165,7 +155,12 @@ def iniciar_robot_sacel_mensual():
                     pass
 
             archivo_descargado = verificar_descarga(CARPETA_DESCARGAS, ts)
+            if not archivo_descargado:
+                raise RuntimeError("No se encontro el Excel descargado desde Sacel")
 
+    except Exception:
+        guardar_screenshot_error(driver, "error_sacel_actividades.png")
+        raise
     finally:
         try:
             driver.quit()

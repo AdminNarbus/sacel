@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import time
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -16,6 +17,13 @@ def script_path(name: str):
 def ensure_dirs(*paths):
     for path in paths:
         Path(path).mkdir(parents=True, exist_ok=True)
+
+
+def env_bool(nombre, default=False):
+    valor = os.getenv(nombre)
+    if valor is None:
+        return default
+    return valor.strip().lower() in ("true", "1", "yes", "y", "si")
 
 
 def ejecutar_con_reintentos(funcion, nombre, max_intentos=3, espera=15):
@@ -69,6 +77,68 @@ def inyectar_fecha_js(driver, id_elemento, valor_fecha):
     """
     driver.execute_script(script)
     print(f"      [INFO] Fecha inyectada en {id_elemento}: {valor_fecha}")
+
+
+def chrome_options_descargas(carpeta_descargas):
+    """Chrome estable para robots Sacel.
+
+    En CI se usa Chrome con pantalla virtual (xvfb), igual que el pipeline
+    Scania. Localmente se mantiene headless por defecto para no abrir ventana.
+    """
+    from selenium import webdriver
+
+    download_dir = str(Path(carpeta_descargas).resolve())
+    headless = env_bool("SACEL_HEADLESS", default=not env_bool("CI", False))
+
+    options = webdriver.ChromeOptions()
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--ignore-certificate-errors")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+    options.page_load_strategy = "eager"
+
+    chrome_bin = find_chrome_binary()
+    if chrome_bin:
+        options.binary_location = chrome_bin
+
+    prefs = {
+        "download.default_directory": download_dir,
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        "safebrowsing.enabled": True,
+        "profile.default_content_settings.popups": 0,
+    }
+    options.add_experimental_option("prefs", prefs)
+    return options
+
+
+def preparar_chrome_descargas(driver, carpeta_descargas):
+    download_dir = str(Path(carpeta_descargas).resolve())
+    try:
+        driver.execute_cdp_cmd("Page.setDownloadBehavior", {
+            "behavior": "allow",
+            "downloadPath": download_dir,
+        })
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        })
+    except Exception as exc:
+        print(f"[WARN] No se pudo aplicar configuracion CDP de Chrome: {exc}")
+
+
+def guardar_screenshot_error(driver, nombre):
+    try:
+        ruta = ROOT_DIR / nombre
+        driver.save_screenshot(str(ruta))
+        print(f"[DEBUG] Captura de error guardada en: {ruta}")
+    except Exception as exc:
+        print(f"[WARN] No se pudo guardar captura de error: {exc}")
 
 
 def find_chrome_binary():
